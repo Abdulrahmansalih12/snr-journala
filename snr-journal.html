@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SNR Trading Journal</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0d0f12; --surface:#131619; --surface2:#1a1e24; --border:#22272f; --border2:#2c333d;
+  --text:#dde3ec; --text2:#7a8899; --text3:#3d4a58;
+  --win:#16a366; --win-bg:#091f12; --win-border:#0d3a1e;
+  --loss:#c0392b; --loss-bg:#1f0909; --loss-border:#3d1010;
+  --accent:#3b82f6; --gold:#f59e0b; --gold-bg:#1f1708;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans Arabic',Inter,sans-serif;min-height:100vh;display:flex;flex-direction:column;}
+
+/* NAV */
+.nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;height:52px;flex-shrink:0;gap:0;overflow-x:auto;}
+.nav::-webkit-scrollbar{display:none;}
+.nav-logo{font-size:15px;font-weight:700;color:var(--text);margin-left:20px;white-space:nowrap;flex-shrink:0;}
+.nav-logo span{color:var(--accent);}
+.nav-tab{height:100%;display:flex;align-items:center;padding:0 14px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;flex-shrink:0;}
+.nav-tab:hover{color:var(--text);}
+.nav-tab.active{color:var(--text);border-bottom-color:var(--accent);}
+.nav-lang{margin-right:auto;display:flex;gap:4px;flex-shrink:0;}
+.lang-btn{background:var(--surface2);border:1px solid var(--border2);color:var(--text2);font-size:11px;font-weight:600;padding:4px 9px;border-radius:6px;cursor:pointer;font-family:inherit;transition:all .2s;}
+.lang-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+/* PAGES */
+.page{display:none;flex:1;overflow-y:auto;}
+.page.active{display:flex;}
+
+/* ── PAGE: ADD TRADE ── */
+.add-page{flex-direction:column;align-items:center;padding:28px 20px;gap:18px;}
+.page-title{font-size:20px;font-weight:700;text-align:center;}
+.page-subtitle{font-size:13px;color:var(--text2);text-align:center;margin-top:3px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;width:100%;max-width:520px;}
+.card-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:16px;display:flex;align-items:center;gap:7px;}
+.card-title::before{content:'';display:block;width:3px;height:13px;background:var(--accent);border-radius:2px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-group.full{grid-column:1/-1;}
+.form-label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.4px;}
+.form-input,.form-select{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:border-color .2s;width:100%;}
+.form-input:focus,.form-select:focus{border-color:var(--accent);}
+.form-select option{background:var(--surface2);}
+.toggle-row{display:grid;grid-template-columns:1fr 1fr;border-radius:8px;overflow:hidden;border:1px solid var(--border2);}
+.tog-btn{padding:10px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;background:var(--surface2);color:var(--text2);transition:all .2s;border:none;font-family:inherit;}
+.tog-btn.buy.on{background:var(--win-bg);color:var(--win);border:1px solid var(--win-border);}
+.tog-btn.sell.on{background:var(--loss-bg);color:var(--loss);border:1px solid var(--loss-border);}
+.tog-btn.profit.on{background:var(--win-bg);color:var(--win);border:1px solid var(--win-border);}
+.tog-btn.losst.on{background:var(--loss-bg);color:var(--loss);border:1px solid var(--loss-border);}
+.pnl-wrap{position:relative;}
+.pnl-prefix{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--text3);pointer-events:none;}
+.pnl-wrap .form-input{padding-left:32px;}
+.add-btn{width:100%;max-width:520px;background:var(--accent);border:none;border-radius:10px;padding:13px;color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;}
+.add-btn:hover{background:#2563eb;}
+.today-list{width:100%;max-width:520px;display:flex;flex-direction:column;gap:9px;}
+.t-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 15px;display:flex;align-items:center;gap:11px;}
+.t-item.wi{border-color:var(--win-border);background:var(--win-bg);}
+.t-item.lo{border-color:var(--loss-border);background:var(--loss-bg);}
+.t-badge{width:36px;height:36px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
+.t-badge.buy{background:#0d2e19;color:var(--win);border:1px solid var(--win-border);}
+.t-badge.sell{background:#2a0d0d;color:var(--loss);border:1px solid var(--loss-border);}
+.t-info{flex:1;}
+.t-pair{font-size:13px;font-weight:600;}
+.t-meta{font-size:11px;color:var(--text2);margin-top:2px;}
+.t-pnl{font-size:15px;font-weight:700;}
+.t-pnl.pos{color:var(--win);}
+.t-pnl.neg{color:var(--loss);}
+.del-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:3px 6px;border-radius:4px;transition:all .2s;}
+.del-btn:hover{color:var(--loss);background:var(--loss-bg);}
+.warn-bar{width:100%;max-width:520px;background:var(--gold-bg);border:1px solid #4a3310;border-radius:10px;padding:12px 15px;font-size:13px;color:var(--gold);display:none;gap:8px;align-items:flex-start;}
+.warn-bar.show{display:flex;}
+.end-wrap{width:100%;max-width:520px;}
+.end-btn{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;color:var(--text2);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;}
+.end-btn:hover{border-color:var(--gold);color:var(--gold);background:var(--gold-bg);}
+.empty-s{text-align:center;color:var(--text3);font-size:13px;padding:20px;border:1px dashed var(--border);border-radius:10px;width:100%;max-width:520px;}
+
+/* ── PAGE: CALENDAR ── */
+.cal-page{flex-direction:column;padding:20px;gap:18px;}
+.cal-hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+.month-nav{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:7px 14px;}
+.month-nav button{background:none;border:none;color:var(--text2);cursor:pointer;font-size:17px;padding:0 5px;border-radius:4px;transition:all .2s;line-height:1;}
+.month-nav button:hover{color:var(--text);}
+.month-lbl{font-size:14px;font-weight:700;min-width:120px;text-align:center;}
+.stats-row{display:flex;gap:10px;flex-wrap:wrap;}
+.sbox{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 14px;min-width:80px;}
+.sbox .sv{font-size:15px;font-weight:700;}
+.sbox .sl{font-size:10px;color:var(--text3);margin-top:2px;}
+.sbox.g .sv{color:var(--win);}
+.sbox.r .sv{color:var(--loss);}
+.sbox.b .sv{color:var(--accent);}
+.sbox.go .sv{color:var(--gold);}
+.cal-body{display:grid;grid-template-columns:1fr 150px;gap:14px;align-items:start;}
+.cal-main{display:flex;flex-direction:column;}
+.day-names{display:grid;grid-template-columns:repeat(7,1fr);background:var(--surface);border:1px solid var(--border);border-bottom:none;border-radius:12px 12px 0 0;}
+.day-name{padding:10px 6px;text-align:center;font-size:11px;font-weight:600;color:var(--text3);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);border:1px solid var(--border);border-radius:0 0 12px 12px;overflow:hidden;}
+.cc{min-height:90px;padding:8px 9px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;display:flex;flex-direction:column;background:var(--surface);}
+.cc:nth-child(7n){border-right:none;}
+.cc:hover{background:var(--surface2);}
+.cc.emp{background:#0b0c0f;cursor:default;}
+.cc.emp:hover{background:#0b0c0f;}
+.cc.win{background:var(--win-bg);}
+.cc.win:hover{background:#0c2918;}
+.cc.loss{background:var(--loss-bg);}
+.cc.loss:hover{background:#250d0d;}
+.cc.tod{box-shadow:inset 0 0 0 2px var(--accent);}
+.cc-num{font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;}
+.cc.tod .cc-num{color:var(--accent);}
+.cc-pnl{font-size:15px;font-weight:700;}
+.cc.win .cc-pnl{color:var(--win);}
+.cc.loss .cc-pnl{color:var(--loss);}
+.cc-cnt{font-size:10px;color:var(--text2);margin-top:3px;display:flex;align-items:center;gap:3px;}
+.cc-dot{width:5px;height:5px;border-radius:50%;}
+.cc.win .cc-dot{background:var(--win);}
+.cc.loss .cc-dot{background:var(--loss);}
+.cc-warn{font-size:9px;color:var(--gold);margin-top:2px;}
+.weekly-sb{display:flex;flex-direction:column;gap:9px;}
+.wk-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 13px;}
+.wk-lbl{font-size:10px;color:var(--text3);margin-bottom:5px;}
+.wk-pnl{font-size:16px;font-weight:700;}
+.wk-pnl.pos{color:var(--win);}
+.wk-pnl.neg{color:var(--loss);}
+.wk-d{font-size:10px;color:var(--text3);margin-top:2px;}
+
+/* ── PAGE: STRATEGY ── */
+.strat-page{flex-direction:column;padding:28px 20px;gap:16px;align-items:center;}
+.strat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;width:100%;max-width:620px;}
+.strat-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.strat-title{font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;}
+.strat-title .si{font-size:16px;}
+.edit-btn{background:var(--surface2);border:1px solid var(--border2);color:var(--text2);font-size:11px;font-weight:600;padding:5px 11px;border-radius:6px;cursor:pointer;font-family:inherit;transition:all .2s;}
+.edit-btn:hover{border-color:var(--accent);color:var(--accent);}
+.edit-btn.saving{border-color:var(--win);color:var(--win);}
+.strat-content{font-size:13px;color:var(--text2);line-height:1.8;white-space:pre-wrap;}
+.strat-textarea{width:100%;background:var(--surface2);border:1px solid var(--accent);border-radius:8px;padding:12px;color:var(--text);font-family:inherit;font-size:13px;line-height:1.8;outline:none;resize:vertical;min-height:120px;}
+
+/* ── PAGE: CHECKLIST ── */
+.check-page{flex-direction:column;padding:28px 20px;gap:16px;align-items:center;}
+.check-header{text-align:center;width:100%;max-width:520px;}
+.check-title{font-size:20px;font-weight:700;}
+.check-sub{font-size:13px;color:var(--text2);margin-top:4px;}
+.progress-bar-wrap{width:100%;max-width:520px;background:var(--surface2);border-radius:99px;height:6px;overflow:hidden;}
+.progress-bar{height:100%;background:var(--accent);border-radius:99px;transition:width .4s ease;}
+.progress-bar.done{background:var(--win);}
+.progress-label{font-size:12px;color:var(--text2);margin-top:6px;text-align:center;}
+.check-list{width:100%;max-width:520px;display:flex;flex-direction:column;gap:10px;}
+.check-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:13px;cursor:pointer;transition:all .2s;user-select:none;}
+.check-item:hover{background:var(--surface2);}
+.check-item.checked{background:var(--win-bg);border-color:var(--win-border);}
+.check-box{width:22px;height:22px;border-radius:6px;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;font-size:13px;}
+.check-item.checked .check-box{background:var(--win);border-color:var(--win);}
+.check-text{flex:1;}
+.check-main{font-size:13px;font-weight:500;}
+.check-item.checked .check-main{color:var(--text2);text-decoration:line-through;}
+.check-tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;margin-top:4px;background:#1a1e24;color:var(--text3);}
+.check-tag.req{background:#0f1f3d;color:var(--accent);}
+.check-ready{width:100%;max-width:520px;background:var(--win-bg);border:1px solid var(--win-border);border-radius:12px;padding:16px;text-align:center;font-size:14px;font-weight:700;color:var(--win);display:none;}
+.check-ready.show{display:block;}
+.reset-check{width:100%;max-width:520px;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:11px;color:var(--text2);font-family:inherit;font-size:13px;cursor:pointer;transition:all .2s;}
+.reset-check:hover{border-color:var(--text3);color:var(--text);}
+
+/* TOAST */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:11px 20px;font-size:13px;color:var(--text);z-index:999;transition:transform .3s ease;white-space:nowrap;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.warn{border-color:#4a3310;background:var(--gold-bg);color:var(--gold);}
+.toast.ok{border-color:var(--win-border);background:var(--win-bg);color:var(--win);}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo">SNR <span>Trading</span></div>
+  <div class="nav-tab active" id="tab-add" onclick="go('add')" data-key="today">اليوم</div>
+  <div class="nav-tab" id="tab-cal" onclick="go('cal')" data-key="calendar">التقويم</div>
+  <div class="nav-tab" id="tab-strat" onclick="go('strat')" data-key="strategy">الاستراتيجية</div>
+  <div class="nav-tab" id="tab-check" onclick="go('check')" data-key="checklist">Checklist</div>
+  <div class="nav-lang">
+    <button class="lang-btn active" onclick="setLang('ar')">ع</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" onclick="setLang('de')">DE</button>
+  </div>
+</nav>
+
+<!-- PAGE: ADD TRADE -->
+<div class="page active add-page" id="page-add">
+  <div>
+    <div class="page-title" data-t="addTitle">إضافة صفقة</div>
+    <div class="page-subtitle" id="todayLabel"></div>
+  </div>
+  <div class="warn-bar" id="warnBar">⚠️ <span data-t="multiWarn">أكثر من صفقة اليوم — تذكر القاعدة</span></div>
+  <div class="card">
+    <div class="card-title" data-t="tradeDetails">تفاصيل الصفقة</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <div class="form-label" data-t="instrument">الأداة</div>
+        <input class="form-input" id="inPair" placeholder="NAS100"/>
+      </div>
+      <div class="form-group">
+        <div class="form-label" data-t="session">الجلسة</div>
+        <select class="form-select" id="inSession">
+          <option data-t="london">لندن</option>
+          <option data-t="tokyo">طوكيو</option>
+          <option data-t="newyork">نيويورك</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <div class="form-label" data-t="direction">الاتجاه</div>
+        <div class="toggle-row">
+          <button class="tog-btn buy on" id="btnBuy" onclick="setSide('buy')" data-t="buy">▲ شراء</button>
+          <button class="tog-btn sell" id="btnSell" onclick="setSide('sell')" data-t="sell">▼ بيع</button>
+        </div>
+      </div>
+      <div class="form-group full">
+        <div class="form-label" data-t="result">النتيجة</div>
+        <div class="toggle-row" style="margin-bottom:8px">
+          <button class="tog-btn profit on" id="btnProfit" onclick="setPnl('profit')" data-t="profit">✅ ربح</button>
+          <button class="tog-btn losst" id="btnLoss" onclick="setPnl('loss')" data-t="lossBtn">❌ خسارة</button>
+        </div>
+        <div class="pnl-wrap">
+          <span class="pnl-prefix">$</span>
+          <input class="form-input" id="inPnl" type="number" min="0" placeholder="0.00"/>
+        </div>
+      </div>
+      <div class="form-group full">
+        <div class="form-label" data-t="note">ملاحظة (اختياري)</div>
+        <input class="form-input" id="inNote" data-placeholder-t="notePlaceholder" placeholder="مثال: سحب سيولة + BOS على M5"/>
+      </div>
+    </div>
+  </div>
+  <button class="add-btn" onclick="addTrade()" data-t="addBtn">+ إضافة الصفقة للتقويم</button>
+  <div class="today-list" id="todayList"></div>
+  <div class="end-wrap" id="endWrap" style="display:none">
+    <button class="end-btn" onclick="endDay()" data-t="endDay">✅ انتهيت من اليوم</button>
+  </div>
+</div>
+
+<!-- PAGE: CALENDAR -->
+<div class="page cal-page" id="page-cal">
+  <div class="cal-hdr">
+    <div class="month-nav">
+      <button onclick="chMon(-1)">‹</button>
+      <div class="month-lbl" id="monLbl"></div>
+      <button onclick="chMon(1)">›</button>
+    </div>
+    <div class="stats-row">
+      <div class="sbox g"><div class="sv" id="sTot">$0</div><div class="sl" data-t="monthTotal">إجمالي الشهر</div></div>
+      <div class="sbox b"><div class="sv" id="sTrades">0</div><div class="sl" data-t="trades">صفقة</div></div>
+      <div class="sbox g"><div class="sv" id="sWin">—</div><div class="sl" data-t="winRate">نسبة الربح</div></div>
+      <div class="sbox b"><div class="sv" id="sDays">0</div><div class="sl" data-t="tradeDays">يوم تداول</div></div>
+      <div class="sbox go"><div class="sv" id="sMulti">0</div><div class="sl" data-t="multiDays">⚠️ متعدد</div></div>
+    </div>
+  </div>
+  <div class="cal-body">
+    <div class="cal-main">
+      <div class="day-names" id="dayNames"></div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+    <div class="weekly-sb" id="weeklySb"></div>
+  </div>
+</div>
+
+<!-- PAGE: STRATEGY -->
+<div class="page strat-page" id="page-strat">
+  <div style="text-align:center;width:100%;max-width:620px">
+    <div class="page-title" data-t="stratTitle">استراتيجيتي</div>
+    <div class="page-subtitle" data-t="stratSub">اضغط تعديل لتغيير أي قسم</div>
+  </div>
+  <div id="stratSections"></div>
+</div>
+
+<!-- PAGE: CHECKLIST -->
+<div class="page check-page" id="page-check">
+  <div class="check-header">
+    <div class="check-title" data-t="checkTitle">Checklist اليومي</div>
+    <div class="check-sub" data-t="checkSub">تحقق من كل شرط قبل الدخول</div>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
+  <div class="progress-label" id="progressLabel"></div>
+  <div class="check-list" id="checkList"></div>
+  <div class="check-ready" id="checkReady" data-t="readyMsg">✅ كل الشروط مكتملة — جاهز للدخول!</div>
+  <button class="reset-check" onclick="resetCheck()" data-t="resetBtn">↺ إعادة تعيين</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══ STATE ══
+let db = JSON.parse(localStorage.getItem('snr3')||'{}');
+if(!db.trades) db.trades={};
+if(!db.checks) db.checks={};
+if(!db.strat)  db.strat={};
+if(!db.lang)   db.lang='ar';
+
+let lang = db.lang;
+let side = 'buy';
+let pnlType = 'profit';
+let calM = new Date().getMonth();
+let calY = new Date().getFullYear();
+
+function save(){ localStorage.setItem('snr3', JSON.stringify(db)); }
+
+// ══ TRANSLATIONS ══
+const T = {
+  ar:{
+    today:'اليوم', calendar:'التقويم', strategy:'الاستراتيجية', checklist:'Checklist',
+    addTitle:'إضافة صفقة', tradeDetails:'تفاصيل الصفقة',
+    instrument:'الأداة', session:'الجلسة', direction:'الاتجاه', result:'النتيجة',
+    note:'ملاحظة (اختياري)', notePlaceholder:'مثال: سحب سيولة + BOS على M5',
+    buy:'▲ شراء', sell:'▼ بيع', profit:'✅ ربح', lossBtn:'❌ خسارة',
+    london:'لندن', tokyo:'طوكيو', newyork:'نيويورك',
+    addBtn:'+ إضافة الصفقة للتقويم', endDay:'✅ انتهيت من اليوم',
+    multiWarn:'أكثر من صفقة اليوم — تذكر القاعدة',
+    monthTotal:'إجمالي الشهر', trades:'صفقة', winRate:'نسبة الربح',
+    tradeDays:'يوم تداول', multiDays:'⚠️ متعدد',
+    stratTitle:'استراتيجيتي', stratSub:'اضغط تعديل لتغيير أي قسم',
+    edit:'تعديل', save:'حفظ',
+    checkTitle:'Checklist اليومي', checkSub:'تحقق من كل شرط قبل الدخول',
+    readyMsg:'✅ كل الشروط مكتملة — جاهز للدخول!',
+    resetBtn:'↺ إعادة تعيين',
+    required:'إلزامي', optional:'اختياري',
+    week:'الأسبوع', tradeDayShort:'يوم تداول',
+    toastAdded:'✅ تمت إضافة الصفقة', toastEnded:'✅ يوم ممتاز!',
+    toastMulti:'⚠️ صفقات متعددة — صفقة وحدة بكرة',
+    toastFillPnl:'أدخل قيمة المبلغ',
+    days:['أحد','اثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'],
+    months:['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'],
+    stratSections:[
+      {key:'bias', title:'📍 الـ Bias', default:'طوكيو سحبت Highs ← Bias بيع\nطوكيو سحبت Lows ← Bias شراء\n\nشوف وين السيولة اللي أخذتها طوكيو لتحدد اتجاه لندن.'},
+      {key:'poi', title:'🎯 الـ POI (منطقة الاهتمام)', default:'Order Block: آخر شمعة عكسية قبل اندفاع قوي\nFVG: فراغ بين الشمعات بعد حركة سريعة\nمنطقة رد سابقة: مكان رد منه السعر أكثر من مرة'},
+      {key:'entry', title:'🔑 شروط الدخول', default:'1. طوكيو تسحب سيولة (Highs أو Lows)\n2. Bias واضح من سحب السيولة\n3. لندن تندفع نحو POI\n4. Rejection واضح على المنطقة\n5. BOS أو CHoCH على M5/M15'},
+      {key:'risk', title:'🛡️ إدارة الرصيد', default:'صفقة وحدة في اليوم — لا استثناء\nSL: فوق/تحت الـ Order Block\nTP: سيولة الجهة الثانية من طوكيو\nRR: لا تقل عن 1:2\n\nإذا خسرت → أغلق الكمبيوتر فوراً'},
+      {key:'pattern', title:'📊 السلوك المتكرر', default:'شوف الحركات السابقة للسعر (3-5 أسابيع)\nإذا طوكيو هبطت وعادت ترتد من نفس المنطقة → توقع نفس الحركة\nكلما تكرر النمط أكثر كلما الثقة أعلى'},
+    ],
+    checkItems:[
+      {key:'c1', text:'طوكيو سوّبت سيولة (Highs أو Lows)', req:true},
+      {key:'c2', text:'البياس واضح — Highs = بيع / Lows = شراء', req:true},
+      {key:'c3', text:'لندن رجعت لـ Order Block أو FVG من جهة البياس', req:true},
+      {key:'c4', text:'Rejection واضح على المنطقة (ظل، شمعة انعكاس)', req:true},
+      {key:'c5', text:'BOS أو CHoCH تأكد على M5 أو M15', req:true},
+      {key:'c6', text:'الهدف (Target) = سيولة الجهة الثانية — RR ≥ 1:2', req:true},
+      {key:'c7', text:'هذه أول صفقة اليوم — لم يكن هناك دخول سابق', req:true},
+    ]
+  },
+  en:{
+    today:'Today', calendar:'Calendar', strategy:'Strategy', checklist:'Checklist',
+    addTitle:'Add Trade', tradeDetails:'Trade Details',
+    instrument:'Instrument', session:'Session', direction:'Direction', result:'Result',
+    note:'Note (optional)', notePlaceholder:'e.g. Liquidity sweep + BOS on M5',
+    buy:'▲ Buy', sell:'▼ Sell', profit:'✅ Win', lossBtn:'❌ Loss',
+    london:'London', tokyo:'Tokyo', newyork:'New York',
+    addBtn:'+ Add Trade to Calendar', endDay:'✅ Done for Today',
+    multiWarn:'More than one trade today — remember the rule',
+    monthTotal:'Monthly Total', trades:'Trades', winRate:'Win Rate',
+    tradeDays:'Trade Days', multiDays:'⚠️ Multi',
+    stratTitle:'My Strategy', stratSub:'Press Edit to modify any section',
+    edit:'Edit', save:'Save',
+    checkTitle:'Daily Checklist', checkSub:'Verify all conditions before entry',
+    readyMsg:'✅ All conditions met — ready to enter!',
+    resetBtn:'↺ Reset',
+    required:'Required', optional:'Optional',
+    week:'Week', tradeDayShort:'trade days',
+    toastAdded:'✅ Trade added', toastEnded:'✅ Great day!',
+    toastMulti:'⚠️ Multiple trades — one trade tomorrow',
+    toastFillPnl:'Enter the amount',
+    days:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+    months:['January','February','March','April','May','June','July','August','September','October','November','December'],
+    stratSections:[
+      {key:'bias', title:'📍 Bias', default:'Tokyo swept Highs → Sell bias\nTokyo swept Lows → Buy bias\n\nIdentify which liquidity Tokyo took to determine London\'s direction.'},
+      {key:'poi', title:'🎯 POI (Point of Interest)', default:'Order Block: last opposing candle before a strong move\nFVG: gap left by fast price movement\nPrevious reaction zone: price reacted here multiple times'},
+      {key:'entry', title:'🔑 Entry Conditions', default:'1. Tokyo sweeps liquidity (Highs or Lows)\n2. Clear bias from the sweep\n3. London impulses toward POI\n4. Clear rejection at the zone\n5. BOS or CHoCH confirmed on M5/M15'},
+      {key:'risk', title:'🛡️ Risk Management', default:'One trade per day — no exceptions\nSL: above/below the Order Block\nTP: opposite Tokyo liquidity\nRR: minimum 1:2\n\nIf you lose → close the computer immediately'},
+      {key:'pattern', title:'📊 Recurring Behavior', default:'Study past price behavior (3–5 weeks back)\nIf Tokyo dropped and price bounced from same zone → expect the same\nThe more the pattern repeats, the higher the confidence'},
+    ],
+    checkItems:[
+      {key:'c1', text:'Tokyo swept liquidity (Highs or Lows)', req:true},
+      {key:'c2', text:'Bias is clear — Highs swept = Sell / Lows swept = Buy', req:true},
+      {key:'c3', text:'London returned to an Order Block or FVG in bias direction', req:true},
+      {key:'c4', text:'Clear rejection at the zone (wick, reversal candle)', req:true},
+      {key:'c5', text:'BOS or CHoCH confirmed on M5 or M15', req:true},
+      {key:'c6', text:'Target = opposite Tokyo liquidity — RR ≥ 1:2', req:true},
+      {key:'c7', text:'This is the first trade of the day — no prior entry', req:true},
+    ]
+  },
+  de:{
+    today:'Heute', calendar:'Kalender', strategy:'Strategie', checklist:'Checkliste',
+    addTitle:'Trade hinzufügen', tradeDetails:'Trade-Details',
+    instrument:'Instrument', session:'Sitzung', direction:'Richtung', result:'Ergebnis',
+    note:'Notiz (optional)', notePlaceholder:'z.B. Liquiditätssweep + BOS auf M5',
+    buy:'▲ Kauf', sell:'▼ Verkauf', profit:'✅ Gewinn', lossBtn:'❌ Verlust',
+    london:'London', tokyo:'Tokio', newyork:'New York',
+    addBtn:'+ Trade zum Kalender hinzufügen', endDay:'✅ Tag beendet',
+    multiWarn:'Mehr als ein Trade heute — denk an die Regel',
+    monthTotal:'Monatsgesamt', trades:'Trades', winRate:'Gewinnrate',
+    tradeDays:'Handelstage', multiDays:'⚠️ Mehrfach',
+    stratTitle:'Meine Strategie', stratSub:'Bearbeiten drücken um einen Abschnitt zu ändern',
+    edit:'Bearbeiten', save:'Speichern',
+    checkTitle:'Tägliche Checkliste', checkSub:'Alle Bedingungen vor dem Einstieg prüfen',
+    readyMsg:'✅ Alle Bedingungen erfüllt — bereit zum Einsteigen!',
+    resetBtn:'↺ Zurücksetzen',
+    required:'Pflicht', optional:'Optional',
+    week:'Woche', tradeDayShort:'Handelstage',
+    toastAdded:'✅ Trade hinzugefügt', toastEnded:'✅ Toller Tag!',
+    toastMulti:'⚠️ Mehrere Trades — morgen nur einer',
+    toastFillPnl:'Betrag eingeben',
+    days:['So','Mo','Di','Mi','Do','Fr','Sa'],
+    months:['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'],
+    stratSections:[
+      {key:'bias', title:'📍 Bias', default:'Tokio sweepte Highs → Verkaufs-Bias\nTokio sweepte Lows → Kauf-Bias\n\nBestimme welche Liquidität Tokio genommen hat, um die Londoner Richtung festzulegen.'},
+      {key:'poi', title:'🎯 POI (Point of Interest)', default:'Order Block: letzte Gegenkerze vor starker Bewegung\nFVG: Lücke durch schnelle Kursbewegung\nVorherige Reaktionszone: Kurs hat hier mehrfach reagiert'},
+      {key:'entry', title:'🔑 Einstiegsbedingungen', default:'1. Tokio sweept Liquidität (Highs oder Lows)\n2. Klarer Bias aus dem Sweep\n3. London impulsiert in Richtung POI\n4. Klare Ablehnung an der Zone\n5. BOS oder CHoCH auf M5/M15 bestätigt'},
+      {key:'risk', title:'🛡️ Risikomanagement', default:'Ein Trade pro Tag — keine Ausnahmen\nSL: ober-/unterhalb des Order Blocks\nTP: gegenüberliegende Tokio-Liquidität\nRR: mindestens 1:2\n\nBei Verlust → Computer sofort schließen'},
+      {key:'pattern', title:'📊 Wiederkehrendes Verhalten', default:'Vergangenes Kursverhalten studieren (3–5 Wochen zurück)\nWenn Tokio fiel und Kurs von gleicher Zone abprallte → gleiche Bewegung erwarten\nJe öfter das Muster wiederholt wird, desto höher die Konfidenz'},
+    ],
+    checkItems:[
+      {key:'c1', text:'Tokio hat Liquidität gesweept (Highs oder Lows)', req:true},
+      {key:'c2', text:'Bias ist klar — Highs gesweept = Verkauf / Lows gesweept = Kauf', req:true},
+      {key:'c3', text:'London kehrte zu Order Block oder FVG in Bias-Richtung zurück', req:true},
+      {key:'c4', text:'Klare Ablehnung an der Zone (Docht, Umkehrkerze)', req:true},
+      {key:'c5', text:'BOS oder CHoCH auf M5 oder M15 bestätigt', req:true},
+      {key:'c6', text:'Ziel = gegenüberliegende Tokio-Liquidität — RR ≥ 1:2', req:true},
+      {key:'c7', text:'Dies ist der erste Trade des Tages — kein vorheriger Einstieg', req:true},
+    ]
+  }
+};
+
+function t(key){ return T[lang][key]||T['ar'][key]||key; }
+
+// ══ LANG ══
+function setLang(l){
+  lang=l; db.lang=l; save();
+  document.documentElement.lang = l==='ar'?'ar':'en';
+  document.documentElement.dir  = l==='ar'?'rtl':'ltr';
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.lang-btn').forEach(b=>{ if(b.textContent.trim()===(l==='ar'?'ع':l==='en'?'EN':'DE')) b.classList.add('active'); });
+  applyTranslations();
+  renderTodayList();
+  renderChecklist();
+  renderStrat();
+  renderCalendar();
+}
+
+function applyTranslations(){
+  document.querySelectorAll('[data-t]').forEach(el=>{
+    const key=el.getAttribute('data-t');
+    if(el.tagName==='OPTION') el.textContent=t(key);
+    else el.textContent=t(key);
+  });
+  document.querySelectorAll('[data-placeholder-t]').forEach(el=>{
+    el.placeholder=t(el.getAttribute('data-placeholder-t'));
+  });
+  // nav tabs
+  document.getElementById('tab-add').textContent=t('today');
+  document.getElementById('tab-cal').textContent=t('calendar');
+  document.getElementById('tab-strat').textContent=t('strategy');
+  document.getElementById('tab-check').textContent=t('checklist');
+  // today label
+  const now=new Date();
+  document.getElementById('todayLabel').textContent=`${now.getDate()} ${t('months').split?t('months')[now.getMonth()]:new Date().toLocaleDateString()}`;
+  updateTodayLabel();
+}
+
+function updateTodayLabel(){
+  const now=new Date();
+  const months=T[lang].months;
+  document.getElementById('todayLabel').textContent=`${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+}
+
+// ══ NAV ══
+function go(p){
+  document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(e=>e.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  document.getElementById('tab-'+p).classList.add('active');
+  if(p==='cal') renderCalendar();
+  if(p==='strat') renderStrat();
+  if(p==='check') renderChecklist();
+}
+
+// ══ KEYS ══
+function todayKey(){
+  const d=new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function dkey(y,m,d){ return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+
+function fmtPnl(v){
+  const n=parseFloat(v)||0;
+  const a=Math.abs(n);
+  const s=a>=1000?(a/1000).toFixed(1)+'K':a.toFixed(0);
+  return (n>=0?'+$':'-$')+s;
+}
+
+// ══ SIDE/PNL TOGGLES ══
+function setSide(s){
+  side=s;
+  document.getElementById('btnBuy').classList.toggle('on',s==='buy');
+  document.getElementById('btnSell').classList.toggle('on',s==='sell');
+}
+function setPnl(p){
+  pnlType=p;
+  document.getElementById('btnProfit').classList.toggle('on',p==='profit');
+  document.getElementById('btnLoss').classList.toggle('on',p==='loss');
+}
+
+// ══ ADD TRADE ══
+function addTrade(){
+  const raw=document.getElementById('inPnl').value;
+  if(!raw){ showToast(t('toastFillPnl')); return; }
+  const amt=Math.abs(parseFloat(raw));
+  const pnl=pnlType==='profit'?amt:-amt;
+  const k=todayKey();
+  if(!db.trades[k]) db.trades[k]=[];
+  db.trades[k].push({
+    pair:document.getElementById('inPair').value||'NAS100',
+    side, pnl,
+    session:document.getElementById('inSession').value,
+    note:document.getElementById('inNote').value
+  });
+  save();
+  document.getElementById('inPnl').value='';
+  document.getElementById('inNote').value='';
+  document.getElementById('inPair').value='';
+  renderTodayList();
+  showToast(t('toastAdded'),'ok');
+}
+
+// ══ TODAY LIST ══
+function renderTodayList(){
+  const k=todayKey();
+  const tr=db.trades[k]||[];
+  const list=document.getElementById('todayList');
+  const endW=document.getElementById('endWrap');
+  const warnB=document.getElementById('warnBar');
+  warnB.classList.toggle('show',tr.length>1);
+  endW.style.display=tr.length>0?'block':'none';
+  if(tr.length===0){ list.innerHTML=`<div class="empty-s">${t('trades')} 0</div>`; return; }
+  list.innerHTML=tr.map((t2,i)=>{
+    const p=parseFloat(t2.pnl)||0;
+    const sideLabel=t2.side==='buy'?t('buy'):t('sell');
+    return `<div class="t-item ${p>=0?'wi':'lo'}">
+      <div class="t-badge ${t2.side}">${sideLabel}</div>
+      <div class="t-info">
+        <div class="t-pair">${t2.pair} — ${t2.session}</div>
+        ${t2.note?`<div class="t-meta">${t2.note}</div>`:''}
+      </div>
+      <div class="t-pnl ${p>=0?'pos':'neg'}">${fmtPnl(p)}</div>
+      <button class="del-btn" onclick="delTrade('${k}',${i})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function delTrade(k,i){
+  db.trades[k].splice(i,1);
+  if(db.trades[k].length===0) delete db.trades[k];
+  save(); renderTodayList();
+}
+
+function endDay(){
+  const k=todayKey();
+  const tr=db.trades[k]||[];
+  if(!tr.length) return;
+  showToast(tr.length>1?t('toastMulti'):t('toastEnded'), tr.length>1?'warn':'ok');
+}
+
+// ══ CALENDAR ══
+function renderCalendar(){
+  const months=T[lang].months;
+  const days=T[lang].days;
+  document.getElementById('monLbl').textContent=`${months[calM]} ${calY}`;
+
+  // day headers
+  const dn=document.getElementById('dayNames');
+  dn.innerHTML=days.map(d=>`<div class="day-name">${d}</div>`).join('');
+
+  const first=new Date(calY,calM,1).getDay();
+  const dim=new Date(calY,calM+1,0).getDate();
+  const today=new Date();
+
+  let tPnl=0,tT=0,wins=0,tDays=0,multi=0;
+  for(let d=1;d<=dim;d++){
+    const k=dkey(calY,calM,d);
+    const tr=db.trades[k]||[];
+    if(tr.length){tDays++;tT+=tr.length;if(tr.length>1)multi++;}
+    tr.forEach(t2=>{tPnl+=parseFloat(t2.pnl)||0;if((parseFloat(t2.pnl)||0)>0)wins++;});
+  }
+  const pEl=document.getElementById('sTot');
+  pEl.textContent=fmtPnl(tPnl);
+  pEl.parentElement.className='sbox '+(tPnl>=0?'g':'r');
+  document.getElementById('sTrades').textContent=tT;
+  document.getElementById('sWin').textContent=tT?Math.round(wins/tT*100)+'%':'—';
+  document.getElementById('sDays').textContent=tDays;
+  document.getElementById('sMulti').textContent=multi;
+
+  const grid=document.getElementById('calGrid');
+  grid.innerHTML='';
+  const weeks=[];
+  let wk={pnl:0,days:0};
+  let dc=0;
+
+  for(let i=0;i<first;i++){
+    grid.appendChild(Object.assign(document.createElement('div'),{className:'cc emp'}));
+    dc++;
+    if(dc%7===0){weeks.push({...wk});wk={pnl:0,days:0};}
+  }
+
+  for(let d=1;d<=dim;d++){
+    const k=dkey(calY,calM,d);
+    const tr=db.trades[k]||[];
+    const dp=tr.reduce((s,t2)=>s+(parseFloat(t2.pnl)||0),0);
+    const isT=today.getDate()===d&&today.getMonth()===calM&&today.getFullYear()===calY;
+    const c=document.createElement('div');
+    let cls='cc';
+    if(tr.length) cls+=dp>=0?' win':' loss';
+    if(isT) cls+=' tod';
+    c.className=cls;
+    let h=`<div class="cc-num">${d}</div>`;
+    if(tr.length){
+      h+=`<div class="cc-pnl">${fmtPnl(dp)}</div>`;
+      h+=`<div class="cc-cnt"><span class="cc-dot"></span>${tr.length} ${t('trades')}</div>`;
+      if(tr.length>1) h+=`<div class="cc-warn">⚠️</div>`;
+    }
+    c.innerHTML=h;
+    grid.appendChild(c);
+    if(tr.length){wk.pnl+=dp;wk.days++;}
+    dc++;
+    if(dc%7===0){weeks.push({...wk});wk={pnl:0,days:0};}
+  }
+  const rem=(first+dim)%7;
+  if(rem>0){
+    for(let i=rem;i<7;i++) grid.appendChild(Object.assign(document.createElement('div'),{className:'cc emp'}));
+    weeks.push({...wk});
+  }
+
+  const sb=document.getElementById('weeklySb');
+  sb.innerHTML=weeks.map((w,i)=>`
+    <div class="wk-card">
+      <div class="wk-lbl">${t('week')} ${i+1}</div>
+      <div class="wk-pnl ${w.pnl>=0?'pos':'neg'}">${fmtPnl(w.pnl)}</div>
+      <div class="wk-d">${w.days} ${t('tradeDayShort')}</div>
+    </div>`).join('');
+}
+
+function chMon(d){
+  calM+=d;
+  if(calM>11){calM=0;calY++;}
+  if(calM<0){calM=11;calY--;}
+  renderCalendar();
+}
+
+// ══ STRATEGY ══
+function renderStrat(){
+  const sections=T[lang].stratSections;
+  const container=document.getElementById('stratSections');
+  container.innerHTML='';
+  container.style.width='100%';
+  container.style.maxWidth='620px';
+  container.style.display='flex';
+  container.style.flexDirection='column';
+  container.style.gap='14px';
+
+  sections.forEach(sec=>{
+    const content=db.strat[sec.key]||sec.default;
+    const card=document.createElement('div');
+    card.className='strat-card';
+    card.innerHTML=`
+      <div class="strat-hdr">
+        <div class="strat-title">${sec.title}</div>
+        <button class="edit-btn" id="ebtn-${sec.key}" onclick="editStrat('${sec.key}')">${t('edit')}</button>
+      </div>
+      <div class="strat-content" id="sc-${sec.key}">${content}</div>
+      <textarea class="strat-textarea" id="sta-${sec.key}" style="display:none">${content}</textarea>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function editStrat(key){
+  const content=document.getElementById('sc-'+key);
+  const ta=document.getElementById('sta-'+key);
+  const btn=document.getElementById('ebtn-'+key);
+  if(ta.style.display==='none'){
+    ta.style.display='block';
+    content.style.display='none';
+    btn.textContent=t('save');
+    btn.classList.add('saving');
+  } else {
+    db.strat[key]=ta.value;
+    save();
+    content.textContent=ta.value;
+    ta.style.display='none';
+    content.style.display='block';
+    btn.textContent=t('edit');
+    btn.classList.remove('saving');
+  }
+}
+
+// ══ CHECKLIST ══
+function renderChecklist(){
+  const items=T[lang].checkItems;
+  const todayK=todayKey();
+  if(!db.checks[todayK]) db.checks[todayK]={};
+  const checks=db.checks[todayK];
+  const list=document.getElementById('checkList');
+  list.innerHTML=items.map(item=>`
+    <div class="check-item ${checks[item.key]?'checked':''}" onclick="toggleCheck('${item.key}')">
+      <div class="check-box">${checks[item.key]?'✓':''}</div>
+      <div class="check-text">
+        <div class="check-main">${item.text}</div>
+        <span class="check-tag ${item.req?'req':''}">${item.req?t('required'):t('optional')}</span>
+      </div>
+    </div>`).join('');
+  updateProgress();
+}
+
+function toggleCheck(key){
+  const todayK=todayKey();
+  if(!db.checks[todayK]) db.checks[todayK]={};
+  db.checks[todayK][key]=!db.checks[todayK][key];
+  save();
+  renderChecklist();
+}
+
+function updateProgress(){
+  const items=T[lang].checkItems;
+  const todayK=todayKey();
+  const checks=db.checks[todayK]||{};
+  const done=items.filter(i=>checks[i.key]).length;
+  const total=items.length;
+  const pct=Math.round(done/total*100);
+  const bar=document.getElementById('progressBar');
+  bar.style.width=pct+'%';
+  bar.className='progress-bar'+(done===total?' done':'');
+  document.getElementById('progressLabel').textContent=`${done} / ${total}`;
+  const ready=document.getElementById('checkReady');
+  ready.className='check-ready'+(done===total?' show':'');
+  ready.textContent=t('readyMsg');
+}
+
+function resetCheck(){
+  const todayK=todayKey();
+  db.checks[todayK]={};
+  save();
+  renderChecklist();
+}
+
+// ══ TOAST ══
+function showToast(msg,type=''){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.className='toast'+(type?' '+type:'');
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+// ══ INIT ══
+setLang(lang);
+renderTodayList();
+</script>
+</body>
+</html>
